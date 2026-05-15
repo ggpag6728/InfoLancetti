@@ -1,0 +1,4 @@
+streamlit
+requests
+curl_cffi
+tzdata
