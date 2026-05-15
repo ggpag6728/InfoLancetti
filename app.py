@@ -8,7 +8,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 # --- CONFIGURAZIONE PAGINA ---
-st.set_page_config(page_title="Monitor Trasporti", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Info Milano Lancetti", layout="wide", initial_sidebar_state="collapsed")
 
 # --- CSS PERSONALIZZATO (Il motore del nuovo design) ---
 st.markdown("""
@@ -86,7 +86,7 @@ st.markdown("""
 
 # --- BACKEND LOGIC (Invariato) ---
 MAPPA_LINEE_S = {
-    "VARESE": "S5", "TREVIGLIO": "S5",
+    "VARESE": "S5", "TREVIGLIO": "S5", "CERTOSA" : "S5",
     "NOVARA": "S6", "PIOLTELLO LIMITO": "S6",
     "LODI": "S1", "SARONNO": "S1", 
     "SEVESO": "S2", "MILANO ROGOREDO": "S2",
@@ -121,17 +121,22 @@ def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
         if response.status_code != 200: return []
         treni_json = response.json()
         treni_monitor = []
-        for treno in treni_json[:6]: 
-            destinazione = treno.get("destinazione", "N/D")
-            binario = (treno.get("binarioEffettivoPartenzaDescrizione") or 
-                       treno.get("binarioProgrammatoPartenzaDescrizione") or "-")
-            treni_monitor.append({
-                "linea": MAPPA_LINEE_S.get(destinazione, "REG"),
+        i=0
+        while(i<5 and len(treni_json)>=i):
+            treno=treni_json[i]
+            stato = treno.get("arrivato", "false")
+            if(stato!=True):
+                destinazione = treno.get("destinazione", "N/D")
+                binario = (treno.get("binarioEffettivoPartenzaDescrizione") or 
+                        treno.get("binarioProgrammatoPartenzaDescrizione") or "-")
+                treni_monitor.append({
+                "linea": MAPPA_LINEE_S.get(destinazione, "  "),
                 "destinazione": destinazione,
                 "orario": treno.get("compOrarioPartenza", "--:--"),
                 "ritardo": treno.get("ritardo", 0),
                 "binario": binario
             })
+            i = i+1
         return treni_monitor
     except:
         return []
@@ -162,7 +167,7 @@ ora_attuale = datetime.now(ZoneInfo('Europe/Rome')).strftime('%H:%M:%S')
 # Header in HTML
 st.markdown(f"""
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <h1 style="margin: 0; color: #111827; font-family: sans-serif;">InfoMobilità Milano</h1>
+    <h1 style="margin: 0; color: #111827; font-family: sans-serif;">Info Milano Lancetti</h1>
     <h3 style="margin: 0; color: #6b7280; font-family: sans-serif;">{ora_attuale}</h3>
 </div>
 """, unsafe_allow_html=True)
