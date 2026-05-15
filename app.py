@@ -7,6 +7,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+st.title("🚧 Sito in manutenzione 🚧")
+st.warning("Stiamo aggiornando il progetto. Torna a trovarci presto!")
+
+# Questa funzione blocca l'esecuzione di tutto il codice che c'è sotto
+st.stop()
+
 # --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="Info Milano Lancetti", layout="wide", initial_sidebar_state="collapsed")
 
