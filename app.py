@@ -7,11 +7,84 @@ from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-# --- CONFIGURAZIONE PAGINA STREAMLIT ---
-# Layout "wide" per sfruttare tutto lo schermo come un vero monitor
-st.set_page_config(page_title="Tabellone Trasporti", page_icon="🚆", layout="wide")
+# --- CONFIGURAZIONE PAGINA ---
+st.set_page_config(page_title="Monitor Trasporti", layout="wide", initial_sidebar_state="collapsed")
 
-# --- BACKEND LOGIC ---
+# --- CSS PERSONALIZZATO (Il motore del nuovo design) ---
+st.markdown("""
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet" />
+<style>
+    /* Forza lo sfondo chiaro su tutta l'app */
+    .stApp {
+        background-color: #f3f4f6;
+    }
+    
+    /* Nasconde l'header di default di Streamlit per fare più spazio */
+    header {visibility: hidden;}
+    
+    /* Stile della singola riga (Card) */
+    .transport-row {
+        background-color: #ffffff;
+        border-radius: 8px;
+        padding: 12px 20px;
+        margin-bottom: 8px; /* Spazio ridotto tra le righe */
+        display: flex;
+        align-items: center;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        border: 1px solid #e5e7eb;
+    }
+    
+    /* Stile per le icone moderne */
+    .icon {
+        font-family: 'Material Symbols Rounded';
+        font-size: 28px;
+        color: #6b7280;
+        margin-right: 16px;
+    }
+    
+    /* Stile dei testi */
+    .line-name {
+        font-weight: 700;
+        font-size: 18px;
+        width: 80px;
+        color: #111827;
+    }
+    .destination {
+        flex-grow: 1;
+        font-weight: 600;
+        font-size: 16px;
+        color: #374151;
+    }
+    .details {
+        display: flex;
+        gap: 30px;
+        font-size: 15px;
+        color: #4b5563;
+        align-items: center;
+    }
+    
+    /* Colori degli stati (Ritardi/Attese) */
+    .status-good { color: #059669; font-weight: 700; background: #d1fae5; padding: 4px 8px; border-radius: 4px; }
+    .status-bad { color: #dc2626; font-weight: 700; background: #fee2e2; padding: 4px 8px; border-radius: 4px; }
+    .status-wait { color: #d97706; font-weight: 700; background: #fef3c7; padding: 4px 8px; border-radius: 4px; }
+    .status-neutral { color: #374151; font-weight: 600; }
+    
+    /* Intestazioni di sezione */
+    .section-title {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+        color: #111827;
+        margin-top: 20px;
+        margin-bottom: 15px;
+        font-size: 22px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- BACKEND LOGIC (Invariato) ---
 MAPPA_LINEE_S = {
     "VARESE": "S5", "TREVIGLIO": "S5",
     "NOVARA": "S6", "PIOLTELLO LIMITO": "S6",
@@ -48,7 +121,7 @@ def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
         if response.status_code != 200: return []
         treni_json = response.json()
         treni_monitor = []
-        for treno in treni_json[:5]:
+        for treno in treni_json[:6]: 
             destinazione = treno.get("destinazione", "N/D")
             binario = (treno.get("binarioEffettivoPartenzaDescrizione") or 
                        treno.get("binarioProgrammatoPartenzaDescrizione") or "-")
@@ -83,96 +156,84 @@ def get_atm(fermata: FermataAtm, session: requests_cffi.Session) -> List[Dict[st
     except:
         return []
 
-# --- INTERFACCIA WEB STREAMLIT (STILE TABELLONE) ---
+# --- INTERFACCIA WEB (HTML GENERATO DINAMICAMENTE) ---
 ora_attuale = datetime.now(ZoneInfo('Europe/Rome')).strftime('%H:%M:%S')
 
-# Intestazione Monitor
-col_titolo, col_ora = st.columns([3, 1])
-with col_titolo:
-    st.title("🏙️ Monitor Partenze")
-with col_ora:
-    st.markdown(f"<h3 style='text-align: right; color: gray;'>🕒 {ora_attuale}</h3>", unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
+# Header in HTML
+st.markdown(f"""
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 style="margin: 0; color: #111827; font-family: sans-serif;">InfoMobilità Milano</h1>
+    <h3 style="margin: 0; color: #6b7280; font-family: sans-serif;">{ora_attuale}</h3>
+</div>
+""", unsafe_allow_html=True)
 
 # ==========================================
 # SEZIONE TRENI
 # ==========================================
-st.subheader("🚆 Treni in partenza da Milano Lancetti")
+st.markdown('<div class="section-title"><span class="icon" style="color: #1d4ed8;">train</span> Treni da Lancetti</div>', unsafe_allow_html=True)
 treni_data = get_treni("S01643")
 
 if treni_data:
-    # Intestazione Colonne Tabellone Treni
-    h1, h2, h3, h4, h5 = st.columns([1, 3, 1, 1, 1])
-    h1.markdown("**Treno**")
-    h2.markdown("**Destinazione**")
-    h3.markdown("**Binario**")
-    h4.markdown("**Orario**")
-    h5.markdown("**Stato**")
-    st.markdown("---") # Linea di demarcazione spessa
-    
-    # Righe Dati Treni
     for t in treni_data:
-        c1, c2, c3, c4, c5 = st.columns([1, 3, 1, 1, 1])
-        
-        c1.markdown(f"### {t['linea']}")
-        c2.markdown(f"#### {t['destinazione']}")
-        c3.markdown(f"#### {t['binario']}")
-        c4.markdown(f"#### {t['orario']}")
-        
-        # Gestione colori ritardo
         ritardo_val = t['ritardo']
         if ritardo_val > 0:
-            c5.markdown(f"#### :red[+{ritardo_val}']")
+            stato_css = "status-bad"
+            stato_txt = f"+{ritardo_val}'"
         else:
-            c5.markdown("#### :green[In orario]")
+            stato_css = "status-good"
+            stato_txt = "In orario"
             
-        st.divider() # Linea di separazione sottile
+        riga_html = f"""
+        <div class="transport-row">
+            <span class="icon">train</span>
+            <div class="line-name">{t['linea']}</div>
+            <div class="destination">{t['destinazione']}</div>
+            <div class="details">
+                <span>Binario <b>{t['binario']}</b></span>
+                <span><b>{t['orario']}</b></span>
+                <span class="{stato_css}">{stato_txt}</span>
+            </div>
+        </div>
+        """
+        st.markdown(riga_html, unsafe_allow_html=True)
 else:
-    st.warning("Nessun treno trovato o errore di connessione.")
-
-st.markdown("<br><br>", unsafe_allow_html=True)
+    st.info("Nessun treno in partenza.")
 
 # ==========================================
 # SEZIONE BUS ATM
 # ==========================================
-st.subheader("🚌 Partenze Bus & Filobus")
+st.markdown('<div class="section-title"><span class="icon" style="color: #047857;">directions_bus</span> Bus & Filobus</div>', unsafe_allow_html=True)
 
 with requests_cffi.Session(impersonate="chrome110") as s:
-    s.get("https://giromilano.atm.it/", headers=HEADERS_ATM) # Validazione sessione
+    s.get("https://giromilano.atm.it/", headers=HEADERS_ATM)
     
     for fermata in fermate_atm:
-        st.markdown(f"**🚏 {fermata.nome_identificativo}**")
+        st.markdown(f'<div style="color: #6b7280; font-weight: 600; margin: 15px 0 5px 5px; font-family: sans-serif; font-size: 14px;">{fermata.nome_identificativo}</div>', unsafe_allow_html=True)
         buses_data = get_atm(fermata, s)
         
         if buses_data:
-            # Intestazione Colonne Tabellone Bus
-            bh1, bh2, bh3 = st.columns([1, 4, 2])
-            bh1.markdown("**Linea**")
-            bh2.markdown("**Destinazione**")
-            bh3.markdown("**Attesa**")
-            st.markdown("---")
-            
-            # Righe Dati Bus
             for b in buses_data:
-                bc1, bc2, bc3 = st.columns([1, 4, 2])
-                
-                bc1.markdown(f"### {b['linea']}")
-                bc2.markdown(f"#### {b['destinazione']}")
-                
-                # Gestione colori attesa
-                attesa = b['attesa']
-                if "in arrivo" in attesa.lower():
-                    bc3.markdown(f"#### :green[{attesa}]")
-                elif "min" in attesa.lower():
-                    bc3.markdown(f"#### :orange[{attesa}]")
+                attesa = b['attesa'].lower()
+                if "in arrivo" in attesa:
+                    stato_css = "status-good"
+                elif "min" in attesa:
+                    stato_css = "status-wait"
                 else:
-                    bc3.markdown(f"#### {attesa}")
+                    stato_css = "status-neutral"
                     
-                st.divider()
+                riga_html = f"""
+                <div class="transport-row">
+                    <span class="icon">directions_bus</span>
+                    <div class="line-name">{b['linea']}</div>
+                    <div class="destination">{b['destinazione']}</div>
+                    <div class="details">
+                        <span class="{stato_css}">{b['attesa']}</span>
+                    </div>
+                </div>
+                """
+                st.markdown(riga_html, unsafe_allow_html=True)
         else:
-            st.write("*Nessun dato per questa fermata.*")
-            st.divider()
+            st.markdown('<div style="color: #9ca3af; font-size: 14px; margin-left: 5px;">Nessun dato per questa fermata</div>', unsafe_allow_html=True)
 
 # Logica di auto-aggiornamento ogni 60 secondi
 time.sleep(60)
