@@ -8,7 +8,8 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 # --- CONFIGURAZIONE PAGINA STREAMLIT ---
-st.set_page_config(page_title="Monitor Trasporti Milano", page_icon="🚆", layout="wide")
+# Layout "wide" per sfruttare tutto lo schermo come un vero monitor
+st.set_page_config(page_title="Tabellone Trasporti", page_icon="🚆", layout="wide")
 
 # --- BACKEND LOGIC ---
 MAPPA_LINEE_S = {
@@ -47,19 +48,19 @@ def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
         if response.status_code != 200: return []
         treni_json = response.json()
         treni_monitor = []
-        for treno in treni_json[:8]: # Mostriamo i prossimi 8 treni
+        for treno in treni_json[:5]:
             destinazione = treno.get("destinazione", "N/D")
             binario = (treno.get("binarioEffettivoPartenzaDescrizione") or 
-                       treno.get("binarioProgrammatoPartenzaDescrizione") or "N/D")
+                       treno.get("binarioProgrammatoPartenzaDescrizione") or "-")
             treni_monitor.append({
                 "linea": MAPPA_LINEE_S.get(destinazione, "REG"),
                 "destinazione": destinazione,
-                "orario": treno.get("compOrarioPartenza", "N/D"),
+                "orario": treno.get("compOrarioPartenza", "--:--"),
                 "ritardo": treno.get("ritardo", 0),
                 "binario": binario
             })
         return treni_monitor
-    except Exception as e:
+    except:
         return []
 
 def get_atm(fermata: FermataAtm, session: requests_cffi.Session) -> List[Dict[str, Any]]:
@@ -74,62 +75,103 @@ def get_atm(fermata: FermataAtm, session: requests_cffi.Session) -> List[Dict[st
             dati_linea = bus.get("Line", {})
             bus_monitor.append({
                 "fermata": nome_fermata,
-                "linea": dati_linea.get("LineCode", "N/D"),
+                "linea": dati_linea.get("LineCode", "-"),
                 "destinazione": dati_linea.get("LineDescription", "N/D"),
-                "attesa": bus.get("WaitMessage", "N/D")
+                "attesa": bus.get("WaitMessage", "-")
             })
         return bus_monitor
     except:
         return []
 
-# --- INTERFACCIA WEB STREAMLIT ---
-st.title("🏙️ Monitor Trasporti Milano")
-st.caption(f"Ultimo aggiornamento: {datetime.now(ZoneInfo('Europe/Rome')).strftime('%H:%M:%S')}")
+# --- INTERFACCIA WEB STREAMLIT (STILE TABELLONE) ---
+ora_attuale = datetime.now(ZoneInfo('Europe/Rome')).strftime('%H:%M:%S')
 
-# Creiamo due colonne per affiancare Treni e Bus su schermi grandi
-col_treni, col_bus = st.columns(2)
+# Intestazione Monitor
+col_titolo, col_ora = st.columns([3, 1])
+with col_titolo:
+    st.title("🏙️ Monitor Partenze")
+with col_ora:
+    st.markdown(f"<h3 style='text-align: right; color: gray;'>🕒 {ora_attuale}</h3>", unsafe_allow_html=True)
 
-with col_treni:
-    st.header("🚆 Treni (Milano Lancetti)")
-    treni_data = get_treni("S01643")
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ==========================================
+# SEZIONE TRENI
+# ==========================================
+st.subheader("🚆 Treni in partenza da Milano Lancetti")
+treni_data = get_treni("S01643")
+
+if treni_data:
+    # Intestazione Colonne Tabellone Treni
+    h1, h2, h3, h4, h5 = st.columns([1, 3, 1, 1, 1])
+    h1.markdown("**Treno**")
+    h2.markdown("**Destinazione**")
+    h3.markdown("**Binario**")
+    h4.markdown("**Orario**")
+    h5.markdown("**Stato**")
+    st.markdown("---") # Linea di demarcazione spessa
     
-    if treni_data:
-        for t in treni_data:
-            # Box per ogni treno
-            with st.container(border=True):
-                ritardo_val = t['ritardo']
-                colore_ritardo = "red" if ritardo_val > 0 else "green"
-                testo_ritardo = f"+{ritardo_val}'" if ritardo_val > 0 else "In orario"
-                
-                st.markdown(f"### {t['linea']} ➔ {t['destinazione']}")
-                st.markdown(f"**🕒 Orario:** {t['orario']} | **🛤️ Binario:** {t['binario']} | **⏱️ Stato:** :{colore_ritardo}[{testo_ritardo}]")
-    else:
-        st.warning("Nessun treno trovato o errore di connessione.")
-
-with col_bus:
-    st.header("🚌 Bus & Filobus")
-    
-    with requests_cffi.Session(impersonate="chrome110") as s:
-        s.get("https://giromilano.atm.it/", headers=HEADERS_ATM) # Validazione sessione
+    # Righe Dati Treni
+    for t in treni_data:
+        c1, c2, c3, c4, c5 = st.columns([1, 3, 1, 1, 1])
         
-        for fermata in fermate_atm:
-            st.subheader(f"🚏 {fermata.nome_identificativo}")
-            buses_data = get_atm(fermata, s)
+        c1.markdown(f"### {t['linea']}")
+        c2.markdown(f"#### {t['destinazione']}")
+        c3.markdown(f"#### {t['binario']}")
+        c4.markdown(f"#### {t['orario']}")
+        
+        # Gestione colori ritardo
+        ritardo_val = t['ritardo']
+        if ritardo_val > 0:
+            c5.markdown(f"#### :red[+{ritardo_val}']")
+        else:
+            c5.markdown("#### :green[In orario]")
             
-            if buses_data:
-                for b in buses_data:
-                    # Colora l'attesa se è "in arrivo"
-                    attesa = b['attesa']
-                    if "in arrivo" in attesa.lower():
-                        attesa_formattata = f":green[**{attesa}**]"
-                    elif "min" in attesa.lower():
-                        attesa_formattata = f":orange[**{attesa}**]"
-                    else:
-                        attesa_formattata = attesa
+        st.divider() # Linea di separazione sottile
+else:
+    st.warning("Nessun treno trovato o errore di connessione.")
 
-                    st.markdown(f"**{b['linea']}** {b['destinazione']} ➔ {attesa_formattata}")
-            else:
-                st.write("*Nessun dato per questa fermata.*")
+st.markdown("<br><br>", unsafe_allow_html=True)
+
+# ==========================================
+# SEZIONE BUS ATM
+# ==========================================
+st.subheader("🚌 Partenze Bus & Filobus")
+
+with requests_cffi.Session(impersonate="chrome110") as s:
+    s.get("https://giromilano.atm.it/", headers=HEADERS_ATM) # Validazione sessione
+    
+    for fermata in fermate_atm:
+        st.markdown(f"**🚏 {fermata.nome_identificativo}**")
+        buses_data = get_atm(fermata, s)
+        
+        if buses_data:
+            # Intestazione Colonne Tabellone Bus
+            bh1, bh2, bh3 = st.columns([1, 4, 2])
+            bh1.markdown("**Linea**")
+            bh2.markdown("**Destinazione**")
+            bh3.markdown("**Attesa**")
+            st.markdown("---")
+            
+            # Righe Dati Bus
+            for b in buses_data:
+                bc1, bc2, bc3 = st.columns([1, 4, 2])
+                
+                bc1.markdown(f"### {b['linea']}")
+                bc2.markdown(f"#### {b['destinazione']}")
+                
+                # Gestione colori attesa
+                attesa = b['attesa']
+                if "in arrivo" in attesa.lower():
+                    bc3.markdown(f"#### :green[{attesa}]")
+                elif "min" in attesa.lower():
+                    bc3.markdown(f"#### :orange[{attesa}]")
+                else:
+                    bc3.markdown(f"#### {attesa}")
+                    
+                st.divider()
+        else:
+            st.write("*Nessun dato per questa fermata.*")
             st.divider()
 
 # Logica di auto-aggiornamento ogni 60 secondi
