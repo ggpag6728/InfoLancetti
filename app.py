@@ -57,21 +57,21 @@ st.markdown("""
         margin-right: 15px;
     }
     
-    /* NUOVO BADGE PER LE LINEE */
+    /* BADGE RIDOTTO */
     .badge-line {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 48px;
-        height: 48px;
+        width: 38px;  /* <-- Dimensione ridotta */
+        height: 38px; /* <-- Dimensione ridotta */
         border-radius: 8px;
         color: #ffffff;
         font-weight: 800;
-        font-size: 20px;
-        margin-right: 15px;
+        font-size: 16px; /* <-- Testo più piccolo proporzionato */
+        margin-right: 12px;
         flex-shrink: 0;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3); /* Aiuta la lettura sui colori chiari come il giallo */
     }
     
     .icon {
@@ -102,16 +102,7 @@ st.markdown("""
     }
     
     .det-bin { width: 80px; font-weight: 800; color: #1e40af; }
-    
-    /* ORARIO INGRANDITO */
-    .det-time { 
-        width: 75px; 
-        font-weight: 900; 
-        font-size: 22px; 
-        text-align: center; 
-    }
-    
-    /* RITARDO INGRANDITO E ALLARGATO */
+    .det-time { width: 75px; font-weight: 900; font-size: 22px; text-align: center; }
     .det-status { width: 115px; text-align: center; }
     
     .status-badge {
@@ -155,23 +146,9 @@ st.markdown("""
 
     @media (max-width: 680px) {
         .block-container { padding-top: 0.5rem; }
-        .transport-row {
-            flex-direction: column;
-            align-items: flex-start;
-            padding: 10px 12px;
-        }
-        .main-info {
-            width: 100%;
-            margin-right: 0;
-            margin-bottom: 6px;
-        }
-        .details {
-            width: 100%;
-            justify-content: space-between;
-            border-top: 1px dashed #e2e8f0;
-            padding-top: 6px;
-            gap: 0;
-        }
+        .transport-row { flex-direction: column; align-items: flex-start; padding: 10px 12px; }
+        .main-info { width: 100%; margin-right: 0; margin-bottom: 6px; }
+        .details { width: 100%; justify-content: space-between; border-top: 1px dashed #e2e8f0; padding-top: 6px; gap: 0; }
         .det-bin, .det-time, .det-status { width: auto; text-align: left; }
         .det-status { width: 120px; text-align: right; }
     }
@@ -179,24 +156,43 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- BACKEND LOGIC ---
-MAPPA_LINEE_S = {
-    "VARESE": "S5", "TREVIGLIO": "S5",
-    "NOVARA": "S6", "PIOLTELLO LIMITO": "S6",
-    "LODI": "S1", "SARONNO": "S1", 
-    "SEVESO": "S2", "MILANO ROGOREDO": "S2",
-    "PAVIA": "S13", "MELEGNANO": "S12",
-    "MILANO BOVISA POLITECNICO": "S13" 
+COLORI_LINEE = {
+    "S1": "#dc2626",   # Rosso
+    "S2": "#0d9488",   # Verde acqua (Teal)
+    "S5": "#ea580c",   # Arancione
+    "S6": "#ca8a04",   # Giallo (leggermente scuro per visibilità del testo bianco)
+    "S12": "#15803d",  # Verde scuro
+    "S13": "#78350f",  # Marrone
+    "BUS": "#16a34a"   # Verde ATM
 }
 
-COLORI_LINEE = {
-    "S1": "#E32B26",  # Rosso
-    "S2": "#007A33",  # Verde scuro
-    "S5": "#FF9900",  # Arancione
-    "S6": "#00A5E3",  # Azzurro
-    "S12": "#A61B2B", # Bordeaux
-    "S13": "#C6007E", # Magenta
-    "BUS": "#16a34a"  # Verde ATM
-}
+def individua_linea(treno: Dict[str, Any]) -> str:
+    """Capisce la linea S guardando il numero treno e non solo la destinazione"""
+    # 1. Cerca nel compNumeroTreno (a volte API Trenord lo inserisce es. S13 24314)
+    comp_numero = str(treno.get("compNumeroTreno", "")).upper()
+    for linea in ["S1", "S2", "S5", "S6", "S12", "S13"]:
+        if linea in comp_numero.split():
+            return linea
+            
+    # 2. Riconoscimento infallibile tramite i prefissi numerici Trenord del Passante
+    numero = str(treno.get("numeroTreno", ""))
+    if numero.startswith(("241", "231", "232")): return "S1"
+    if numero.startswith(("226", "228", "229")): return "S2"
+    if numero.startswith(("245", "230")): return "S5"
+    if numero.startswith(("246", "233")): return "S6"
+    if numero.startswith(("256", "242")): return "S12"
+    if numero.startswith(("243", "244")): return "S13"
+    
+    # 3. Fallback sulla destinazione se il numero treno è strano o cambiato
+    dest = str(treno.get("destinazione", "")).upper()
+    if "LODI" in dest or "SARONNO" in dest: return "S1"
+    if "SEVESO" in dest or "MEDA" in dest or "MARIANO" in dest: return "S2"
+    if "VARESE" in dest or "TREVIGLIO" in dest: return "S5"
+    if "NOVARA" in dest or "PIOLTELLO" in dest: return "S6"
+    if "MELEGNANO" in dest or "CORMANO" in dest: return "S12"
+    if "PAVIA" in dest or "GARBAGNATE" in dest: return "S13"
+    
+    return "--"
 
 @dataclass
 class FermataAtm:
@@ -235,7 +231,7 @@ def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
                 binario = str(treno.get("binarioEffettivoPartenzaDescrizione") or 
                               treno.get("binarioProgrammatoPartenzaDescrizione") or "-").strip()
                 treni_monitor.append({
-                    "linea": MAPPA_LINEE_S.get(destinazione, "--"),
+                    "linea": individua_linea(treno), # <-- Nuovo sistema di calcolo
                     "destinazione": destinazione,
                     "orario": treno.get("compOrarioPartenza", "--:--"),
                     "ritardo": treno.get("ritardo", 0),
@@ -245,12 +241,10 @@ def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
     except Exception:
         return []
 
-# Aggiunta Cache anche per gli autobus (ttl=20 secondi)
 @st.cache_data(ttl=20)
 def get_atm(nome_identificativo: str, poi_id: str) -> List[Dict[str, Any]]:
     url = f"https://giromilano.atm.it/proxy.tpportal/api/tpPortal/geodata/pois/{poi_id}?lang=it"
     try:
-        # Creiamo la sessione internamente alla funzione per permettere il caching di Streamlit
         with requests_cffi.Session(impersonate="chrome110") as session:
             session.get("https://giromilano.atm.it/", headers=HEADERS_ATM, timeout=10)
             response = session.get(url, headers=HEADERS_ATM, timeout=10)
@@ -336,7 +330,6 @@ if treni_data:
                 stato_css = "status-good"
                 stato_txt = "In orario"
             
-            # Prende il colore dal dizionario, se non lo trova usa un grigio di default (#94a3b8)
             colore_badge = COLORI_LINEE.get(t['linea'], "#94a3b8")
                 
             riga_html = f"""
@@ -380,7 +373,6 @@ try:
                 elif "min" in attesa: stato_css = "status-wait"
                 else: stato_css = "status-neutral"
                 
-                # Badge per l'autobus, sempre verde ATM
                 colore_badge = COLORI_LINEE["BUS"]
                 
                 riga_html = f"""
