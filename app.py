@@ -273,7 +273,7 @@ secondi_attuali = ora_attuale_dt.strftime('%H:%M:%S')
 st.markdown(f"""
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
     <h1 style="margin: 0; color: #0f172a; font-family: sans-serif; font-weight: 800; font-size: 32px; line-height: 1.2;">
-        Infotrasporti <span style="white-space: nowrap;">Milano Lancetti</span>
+        Info <span style="white-space: nowrap;">Milano Lancetti</span>
     </h1>
     <h2 style="margin: 0; color: #475569; font-family: sans-serif; font-weight: 700; font-size: 26px;">{ora_attuale}</h2>
 </div>
@@ -291,7 +291,7 @@ if inizio_pausa <= ora_corrente < fine_pausa:
 col_title, col_filter = st.columns([3, 1])
 
 with col_title:
-    st.markdown('<div class="section-title" style="margin-top: 0;"><span class="icon" style="color: #2563eb;">train</span> Treni da Milano Lancetti</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title" style="margin-top: 0;"><span class="icon" style="color: #2563eb;">train</span>Treni da Milano Lancetti</div>', unsafe_allow_html=True)
 
 with col_filter:
     filtro_scelto = st.selectbox(
@@ -361,7 +361,7 @@ else:
 # ==========================================
 # SEZIONE BUS ATM
 # ==========================================
-st.markdown('<div class="section-title"><span class="icon" style="color: #16a34a;">directions_bus</span> Bus & Filobus</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title"><span class="icon" style="color: #16a34a;">directions_bus</span>Bus & Filobus</div>', unsafe_allow_html=True)
 
 try:
     bus_trovati = False
