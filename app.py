@@ -279,7 +279,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-inizio_pausa, fine_pausa = 1, 6
+inizio_pausa, fine_pausa = 1, 5
 if inizio_pausa <= ora_corrente < fine_pausa:
     st.info(f"🌙 **Sospensione notturna attiva ({inizio_pausa}:00 - {fine_pausa}:00).** Il monitoraggio riprenderà in automatico.")
     time.sleep(60)
