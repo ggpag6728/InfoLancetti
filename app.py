@@ -23,6 +23,11 @@ st.markdown("""
 <style>
     .stApp { background-color: #f8fafc; }
     header {visibility: hidden;}
+            
+    .block-container {
+        padding-top: 1rem; /* Puoi mettere anche 0rem se lo vuoi completamente attaccato al bordo */
+        padding-bottom: 1rem;
+    }
     
     .transport-row {
         background-color: #ffffff;
@@ -81,16 +86,16 @@ st.markdown("""
         flex-shrink: 0;
     }
     
-    .det-bin { width: 80px; font-weight: 800; color: #1e40af; }
-    .det-time { width: 65px; font-weight: 700; text-align: center; }
-    .det-status { width: 105px; text-align: center; }
+    .det-bin { width: 80px; font-weight: 700; font-size:20px; color: #1e40af; }
+    .det-time { width: 75px; font-weight: 900; font-size:20px; text-align: center; }
+    .det-status { width: 115px; text-align: center; }
     
     .status-badge {
         display: inline-block;
         width: 100%;
-        padding: 5px 0;
+        padding: 6px 0;
         border-radius: 6px;
-        font-size: 14px;
+        font-size: 18px;
         font-weight: 700;
         text-align: center;
     }
@@ -144,7 +149,7 @@ st.markdown("""
             gap: 0;
         }
         .det-bin, .det-time, .det-status { width: auto; text-align: left; }
-        .det-status { width: 110px; text-align: right; }
+        .det-status { width: 120px; text-align: right; }
     }
 </style>
 """, unsafe_allow_html=True)
