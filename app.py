@@ -14,7 +14,7 @@ if "filtro_precedente" not in st.session_state:
     st.session_state.filtro_precedente = "Tutti"
 
 # --- CONFIGURAZIONE PAGINA ---
-st.set_page_config(page_title="Info trasporti Milano Lancetti", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Infotrasporti Milano Lancetti", layout="wide", initial_sidebar_state="collapsed")
 
 # --- CSS PERSONALIZZATO ---
 st.markdown("""
@@ -272,7 +272,9 @@ secondi_attuali = ora_attuale_dt.strftime('%H:%M:%S')
 
 st.markdown(f"""
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
-    <h1 style="margin: 0; color: #0f172a; font-family: sans-serif; font-weight: 800; font-size: 32px;">Infotrasporti Milano Lancetti</h1>
+    <h1 style="margin: 0; color: #0f172a; font-family: sans-serif; font-weight: 800; font-size: 32px; line-height: 1.2;">
+        Infotrasporti <span style="white-space: nowrap;">Milano Lancetti</span>
+    </h1>
     <h2 style="margin: 0; color: #475569; font-family: sans-serif; font-weight: 700; font-size: 26px;">{ora_attuale}</h2>
 </div>
 """, unsafe_allow_html=True)
