@@ -289,7 +289,7 @@ if inizio_pausa <= ora_corrente < fine_pausa:
 col_title, col_filter = st.columns([3, 1])
 
 with col_title:
-    st.markdown('<div class="section-title" style="margin-top: 0;"><span class="icon" style="color: #2563eb;">train</span> Treni da Lancetti</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title" style="margin-top: 0;"><span class="icon" style="color: #2563eb;">train</span> Treni da Milano Lancetti</div>', unsafe_allow_html=True)
 
 with col_filter:
     filtro_scelto = st.selectbox(
