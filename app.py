@@ -257,7 +257,7 @@ with col_title:
 with col_filter:
     filtro_scelto = st.selectbox(
         "Filtro", 
-        ["Tutti", "Binario 1", "Binario 2", "Binari 1 e 2", "Binario 3", "Binario 4", "Binari 3 e 4"],
+        ["Tutti", "BIN. 1", "BIN. 2",  "BIN. 3", "BIN. 4","BIN. 1 e 2", "BIN. 3 e 4"],
         label_visibility="collapsed"
     )
 
@@ -275,12 +275,12 @@ if treni_data:
         b = str(t['binario'])
         if filtro_scelto == "Tutti":
             treni_filtrati.append(t)
-        elif filtro_scelto == "Binario 1" and b == "1": treni_filtrati.append(t)
-        elif filtro_scelto == "Binario 2" and b == "2": treni_filtrati.append(t)
-        elif filtro_scelto == "Binari 1 e 2" and b in ["1", "2"]: treni_filtrati.append(t)
-        elif filtro_scelto == "Binario 3" and b == "3": treni_filtrati.append(t)
-        elif filtro_scelto == "Binario 4" and b == "4": treni_filtrati.append(t)
-        elif filtro_scelto == "Binari 3 e 4" and b in ["3", "4"]: treni_filtrati.append(t)
+        elif filtro_scelto == "BIN. 1" and b == "1": treni_filtrati.append(t)
+        elif filtro_scelto == "BIN. 2" and b == "2": treni_filtrati.append(t)
+        elif filtro_scelto == "BIN. 1 e 2" and b in ["1", "2"]: treni_filtrati.append(t)
+        elif filtro_scelto == "BIN. 3" and b == "3": treni_filtrati.append(t)
+        elif filtro_scelto == "BIN. 4" and b == "4": treni_filtrati.append(t)
+        elif filtro_scelto == "BIN. 3 e 4" and b in ["3", "4"]: treni_filtrati.append(t)
 
     # 2. Selezioniamo solo il numero di treni stabilito dallo stato (di base 5)
     treni_da_mostrare = treni_filtrati[:st.session_state.num_treni]
