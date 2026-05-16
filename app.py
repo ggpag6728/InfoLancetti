@@ -7,12 +7,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-st.title("🚧 Sito in manutenzione 🚧")
-st.warning("Stiamo aggiornando il progetto. Torna a trovarci presto!")
-
-# Questa funzione blocca l'esecuzione di tutto il codice che c'è sotto
-st.stop()
-
 # --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="Info Milano Lancetti", layout="wide", initial_sidebar_state="collapsed")
 
@@ -118,6 +112,7 @@ fermate_atm = [
     FermataAtm(nome_identificativo="91 Jenner -> Lotto", poi_id="5641333")
 ]
 
+
 def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
     dt_rome = datetime.now(ZoneInfo("Europe/Rome"))
     orario_attuale = dt_rome.strftime("%a %b %d %Y %H:%M:%S GMT%z")
@@ -126,31 +121,34 @@ def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
         response = requests.get(url, timeout=10)
         if response.status_code != 200: return []
         treni_json = response.json()
+
+        if not isinstance(treni_json, list):
+            return []
+        
         treni_monitor = []
-        i=0
-        while(i<5 and len(treni_json)>=i):
-            treno=treni_json[i]
-            stato = treno.get("arrivato", False)
-            if(stato!=True):
+        for treno in treni_json:
+            arrivato = treno.get("arrivato", False)
+            if not arrivato:
                 destinazione = treno.get("destinazione", "N/D")
                 binario = (treno.get("binarioEffettivoPartenzaDescrizione") or 
                         treno.get("binarioProgrammatoPartenzaDescrizione") or "-")
                 treni_monitor.append({
-                "linea": MAPPA_LINEE_S.get(destinazione, "  "),
-                "destinazione": destinazione,
-                "orario": treno.get("compOrarioPartenza", "--:--"),
-                "ritardo": treno.get("ritardo", 0),
-                "binario": binario
-            })
-            i = i+1
+                    "linea": MAPPA_LINEE_S.get(destinazione, "--"),
+                    "destinazione": destinazione,
+                    "orario": treno.get("compOrarioPartenza", "--:--"),
+                    "ritardo": treno.get("ritardo", 0),
+                    "binario": binario
+                }) 
+                if len(treni_monitor) == 5:
+                    break 
         return treni_monitor
-    except:
+    except Exception:
         return []
 
 def get_atm(fermata: FermataAtm, session: requests_cffi.Session) -> List[Dict[str, Any]]:
     url = f"https://giromilano.atm.it/proxy.tpportal/api/tpPortal/geodata/pois/{fermata.poi_id}?lang=it"
     try:
-        response = session.get(url, headers=HEADERS_ATM)
+        response = session.get(url, headers=HEADERS_ATM, timeout=10)
         if response.status_code != 200: return []
         fermata_json = response.json()
         nome_fermata = fermata_json.get("Description", fermata.nome_identificativo)
@@ -164,11 +162,13 @@ def get_atm(fermata: FermataAtm, session: requests_cffi.Session) -> List[Dict[st
                 "attesa": bus.get("WaitMessage", "-")
             })
         return bus_monitor
-    except:
+    except Exception:
         return []
 
 # --- INTERFACCIA WEB (HTML GENERATO DINAMICAMENTE) ---
-ora_attuale = datetime.now(ZoneInfo('Europe/Rome')).strftime('%H:%M:%S')
+ora_attuale_dt = datetime.now(ZoneInfo('Europe/Rome'))
+ora_attuale = ora_attuale_dt.strftime('%H:%M:%S')
+ora_corrente = ora_attuale_dt.hour
 
 # Header in HTML
 st.markdown(f"""
@@ -177,6 +177,26 @@ st.markdown(f"""
     <h3 style="margin: 0; color: #6b7280; font-family: sans-serif;">{ora_attuale}</h3>
 </div>
 """, unsafe_allow_html=True)
+
+
+# ==========================================
+# CONTROLLI DI ESECUZIONE (Pausa notturna)
+# ==========================================
+
+inizio_pausa = 1
+fine_pausa = 6
+pausa_notturna = inizio_pausa <= ora_corrente < fine_pausa
+
+# Se la pausa è attiva, mostriamo un messaggio, aspettiamo e ricarichiamo la pagina 
+# SENZA eseguire il resto del codice (che contiene le chiamate API)
+if pausa_notturna:
+    st.info(f"🌙 **Sospensione notturna attiva ({inizio_pausa}:00 - {fine_pausa}:00).** Nessuna chiamata API in corso. Il monitoraggio riprenderà in automatico.")
+    
+    # Aspettiamo 60 secondi e ricarichiamo, così l'orologio in alto avanza e 
+    # l'app può "svegliarsi" da sola alle 6:00
+    time.sleep(60)
+    st.rerun()
+
 
 # ==========================================
 # SEZIONE TRENI
@@ -215,36 +235,42 @@ else:
 # ==========================================
 st.markdown('<div class="section-title"><span class="icon" style="color: #047857;">directions_bus</span> Bus & Filobus</div>', unsafe_allow_html=True)
 
-with requests_cffi.Session(impersonate="chrome110") as s:
-    s.get("https://giromilano.atm.it/", headers=HEADERS_ATM)
-    
-    for fermata in fermate_atm:
-        buses_data = get_atm(fermata, s)
+try:
+    with requests_cffi.Session(impersonate="chrome110") as s:
+        s.get("https://giromilano.atm.it/", headers=HEADERS_ATM, timeout=10)
         
-        if buses_data:
-            bus_trovati = True
-            for b in buses_data:
-                attesa = b['attesa'].lower()
-                if "in arrivo" in attesa:
-                    stato_css = "status-good"
-                elif "min" in attesa:
-                    stato_css = "status-wait"
-                else:
-                    stato_css = "status-neutral"
-                
-                riga_html = f"""
-                <div class="transport-row">
-                    <span class="icon">directions_bus</span>
-                    <div class="line-name">{b['linea']}</div>
-                    <div class="destination">per {b['destinazione'].split('-')[-1].split('(')[0]}</div>
-                    <div class="details">
-                        <span class="{stato_css}">{b['attesa']}</span>
+        bus_trovati = False
+        for fermata in fermate_atm:
+            buses_data = get_atm(fermata, s)
+            
+            if buses_data:
+                bus_trovati = True
+                for b in buses_data:
+                    attesa = b['attesa'].lower()
+                    if "in arrivo" in attesa:
+                        stato_css = "status-good"
+                    elif "min" in attesa:
+                        stato_css = "status-wait"
+                    else:
+                        stato_css = "status-neutral"
+                    
+                    riga_html = f"""
+                    <div class="transport-row">
+                        <span class="icon">directions_bus</span>
+                        <div class="line-name">{b['linea']}</div>
+                        <div class="destination">per {b['destinazione'].split('-')[-1].split('(')[0]}</div>
+                        <div class="details">
+                            <span class="{stato_css}">{b['attesa']}</span>
+                        </div>
                     </div>
-                </div>
-                """
-                st.markdown(riga_html, unsafe_allow_html=True)
+                    """
+                    st.markdown(riga_html, unsafe_allow_html=True)
         if not bus_trovati:
-            st.markdown('<div style="color: #9ca3af; font-size: 14px; margin-left: 5px;">Nessun bus in arrivo</div>', unsafe_allow_html=True)
+            st.markdown('<div style="color: #9ca3af; font-size: 14px; margin-left: 5px;">Nessun bus in arrivo o dati non disponibili al momento</div>', unsafe_allow_html=True)
+
+except Exception as e:
+    # Se il sito ATM è irraggiungibile o va in timeout, mostra un avviso senza bloccarsi
+    st.warning("⚠️ Servizio API ATM momentaneamente irraggiungibile.")
 
 # Logica di auto-aggiornamento ogni 60 secondi
 time.sleep(60)
