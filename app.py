@@ -10,45 +10,55 @@ from zoneinfo import ZoneInfo
 # --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="Info Milano Lancetti", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS PERSONALIZZATO REVISIONATO (Moderno, Allineato e Responsive) ---
+# --- CSS PERSONALIZZATO (Testi grandi, margini ridotti e ottimizzazione mobile) ---
 st.markdown("""
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet" />
 <style>
-    /* Sfondo e font globale */
+    /* Sfondo globale */
     .stApp {
         background-color: #f8fafc;
     }
     
     header {visibility: hidden;}
     
-    /* Layout della Card Principale */
+    /* Layout della Card - Spazi e margini ridotti */
     .transport-row {
         background-color: #ffffff;
-        border-radius: 12px;
-        padding: 14px 20px;
-        margin-bottom: 10px;
+        border-radius: 10px;
+        padding: 8px 16px; /* Padding ridotto per risparmiare spazio verticalmente */
+        margin-bottom: 6px; /* Meno spazio tra le righe */
         display: flex;
         align-items: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.02);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         border: 1px solid #e2e8f0;
-        flex-wrap: wrap; /* Permette il riposizionamento su mobile */
+        justify-content: space-between;
+    }
+    
+    /* Gruppo Info Principali (Icona + Linea + Destinazione) per tenerli sempre uniti */
+    .main-info {
+        display: flex;
+        align-items: center;
+        flex-grow: 1;
+        min-width: 0; /* Permette il corretto troncamento del testo se troppo lungo */
+        margin-right: 15px;
     }
     
     /* Icone */
     .icon {
         font-family: 'Material Symbols Rounded';
-        font-size: 26px;
+        font-size: 28px; /* Icona leggermente più grande */
         color: #64748b;
-        margin-right: 16px;
+        margin-right: 12px;
         display: flex;
         align-items: center;
+        flex-shrink: 0;
     }
     
     /* Codice Linea (S5, S6, 90, ecc.) */
     .line-name {
         font-weight: 800;
-        font-size: 18px;
+        font-size: 20px; /* Scritta più grande */
         width: 65px;
         color: #0f172a;
         flex-shrink: 0;
@@ -56,35 +66,37 @@ st.markdown("""
     
     /* Destinazione principale */
     .destination {
-        flex-grow: 1;
-        font-weight: 600;
-        font-size: 16px;
-        color: #334155;
-        min-width: 150px; /* Evita il collasso su schermi medi */
+        font-weight: 700;
+        font-size: 18px; /* Scritta più grande */
+        color: #1e293b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis; /* Se la scritta è troppo lunga mette i tre puntini anziché andare a capo */
     }
     
-    /* Blocco dettagli (Destra su Desktop, Sotto su Mobile) */
+    /* Blocco dettagli */
     .details {
         display: flex;
         align-items: center;
         gap: 20px;
-        font-size: 15px;
-        color: #475569;
+        font-size: 16px; /* Scritta più grande */
+        color: #334155;
+        flex-shrink: 0;
     }
     
-    /* Sotto-colonne dei dettagli con larghezze fisse per allineamento perfetto */
+    /* Sotto-colonne dei dettagli allineate */
     .det-bin {
-        width: 75px;
-        font-weight: 700;
-        color: #1e40af; /* Colore blu scuro per risaltare il binario */
+        width: 80px;
+        font-weight: 800;
+        color: #1e40af; 
     }
     .det-time {
-        width: 60px;
+        width: 65px;
         font-weight: 700;
         text-align: center;
     }
     .det-status {
-        width: 95px; /* Spazio fisso per i badge */
+        width: 105px; 
         text-align: center;
     }
     
@@ -92,9 +104,9 @@ st.markdown("""
     .status-badge {
         display: inline-block;
         width: 100%;
-        padding: 6px 0;
+        padding: 5px 0;
         border-radius: 6px;
-        font-size: 13px;
+        font-size: 14px; /* Scritta più grande */
         font-weight: 700;
         text-align: center;
     }
@@ -107,37 +119,41 @@ st.markdown("""
     .section-title {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
         color: #0f172a;
-        margin-top: 25px;
-        margin-bottom: 12px;
-        font-size: 20px;
-        font-weight: 700;
+        margin-top: 18px;
+        margin-bottom: 8px;
+        font-size: 22px;
+        font-weight: 800;
         display: flex;
         align-items: center;
         gap: 8px;
     }
 
-    /* Regole Responsive per Mobile (Schermi sotto i 640px) */
-    @media (max-width: 640px) {
+    /* Regole Responsive per Smartphone */
+    @media (max-width: 680px) {
         .transport-row {
-            padding: 12px;
+            flex-direction: column; /* Separa le macro-info dai dettagli orari */
+            align-items: flex-start;
+            padding: 10px 12px;
         }
-        .destination {
-            width: calc(100% - 90px); /* Prende lo spazio di fianco alla linea */
-            margin-bottom: 8px;
+        .main-info {
+            width: 100%;
+            margin-right: 0;
+            margin-bottom: 6px; /* Spazio ridotto tra scritte e orari sotto */
         }
         .details {
-            width: 100%; /* Sposta i dettagli sotto */
-            justify-content: space-between; /* Li distribuisce uniformemente */
+            width: 100%; /* I dettagli occupano tutto lo spazio sotto */
+            justify-content: space-between; /* Distribuzione perfetta su mobile */
             border-top: 1px dashed #e2e8f0;
-            padding-top: 8px;
+            padding-top: 6px;
             gap: 0;
         }
         .det-bin, .det-time, .det-status {
-            width: auto; /* Su mobile usano lo spazio necessario */
+            width: auto; 
             text-align: left;
         }
         .det-status {
-            width: 100px;
+            width: 110px;
+            text-align: right;
         }
     }
 </style>
@@ -224,14 +240,14 @@ def get_atm(fermata: FermataAtm, session: requests_cffi.Session) -> List[Dict[st
 
 # --- INTERFACCIA WEB ---
 ora_attuale_dt = datetime.now(ZoneInfo('Europe/Rome'))
-ora_attuale = ora_attuale_dt.strftime('%H:%M')  # Modificato: rimosso %S per nascondere i secondi
+ora_attuale = ora_attuale_dt.strftime('%H:%M')
 ora_corrente = ora_attuale_dt.hour
 
-# Header
+# Header h1/h2 con scritte più evidenti
 st.markdown(f"""
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
-    <h1 style="margin: 0; color: #0f172a; font-family: sans-serif; font-weight: 800; font-size: 28px;">Info Milano Lancetti</h1>
-    <h2 style="margin: 0; color: #475569; font-family: sans-serif; font-weight: 700;">{ora_attuale}</h2>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+    <h1 style="margin: 0; color: #0f172a; font-family: sans-serif; font-weight: 800; font-size: 32px;">Info Milano Lancetti</h1>
+    <h2 style="margin: 0; color: #475569; font-family: sans-serif; font-weight: 700; font-size: 26px;">{ora_attuale}</h2>
 </div>
 """, unsafe_allow_html=True)
 
@@ -260,9 +276,11 @@ if treni_data:
             
         riga_html = f"""
         <div class="transport-row">
-            <span class="icon">train</span>
-            <div class="line-name">{t['linea']}</div>
-            <div class="destination">{t['destinazione']}</div>
+            <div class="main-info">
+                <span class="icon">train</span>
+                <div class="line-name">{t['linea']}</div>
+                <div class="destination">{t['destinazione']}</div>
+            </div>
             <div class="details">
                 <div class="det-bin">BIN. {t['binario']}</div>
                 <div class="det-time">{t['orario']}</div>
@@ -301,9 +319,11 @@ try:
                     
                     riga_html = f"""
                     <div class="transport-row">
-                        <span class="icon">directions_bus</span>
-                        <div class="line-name">{b['linea']}</div>
-                        <div class="destination">per {b['destinazione'].split('-')[-1].split('(')[0].strip()}</div>
+                        <div class="main-info">
+                            <span class="icon">directions_bus</span>
+                            <div class="line-name">{b['linea']}</div>
+                            <div class="destination">per {b['destinazione'].split('-')[-1].split('(')[0].strip()}</div>
+                        </div>
                         <div class="details">
                             <div class="det-status">
                                 <span class="status-badge {stato_css}">{b['attesa']}</span>
@@ -313,7 +333,7 @@ try:
                     """
                     st.markdown(riga_html, unsafe_allow_html=True)
         if not bus_trovati:
-            st.markdown('<div style="color: #94a3b8; font-size: 14px; margin-left: 5px;">Nessun bus in arrivo o dati non disponibili</div>', unsafe_allow_html=True)
+            st.markdown('<div style="color: #94a3b8; font-size: 15px; margin-left: 5px;">Nessun bus in arrivo o dati non disponibili</div>', unsafe_allow_html=True)
 
 except Exception as e:
     st.warning("⚠️ Servizio API ATM momentaneamente irraggiungibile.")
