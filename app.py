@@ -354,7 +354,7 @@ try:
                         <div class="main-info">
                             <span class="icon">directions_bus</span>
                             <div class="line-name">{b['linea']}</div>
-                            <div class="destination">per {b['destinazione'].split('-')[-1].split('(')[0].strip()}</div>
+                            <div class="destination">{b['destinazione'].split('-')[-1].split('(')[0].strip()}</div>
                         </div>
                         <div class="details">
                             <div class="det-bin" style="color:#64748b; font-weight:normal;">{b['fermata']}</div>
