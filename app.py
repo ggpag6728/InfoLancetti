@@ -8,7 +8,6 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 # --- INIZIALIZZAZIONE STATO ---
-# Necessario per ricordare quanti treni mostrare e resettare il counter se si cambia filtro
 if "num_treni" not in st.session_state:
     st.session_state.num_treni = 5
 if "filtro_precedente" not in st.session_state:
@@ -21,11 +20,19 @@ st.set_page_config(page_title="Info Milano Lancetti", layout="wide", initial_sid
 st.markdown("""
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet" />
 <style>
-    .stApp { background-color: #f8fafc; }
+    /* FORZATURA MODALITA' CHIARA VIA CSS */
+    :root, [data-theme="dark"], .stApp {
+        --text-color: #0f172a !important;
+        --background-color: #f8fafc !important;
+        --secondary-background-color: #ffffff !important;
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
+    }
+    
     header {visibility: hidden;}
-            
+    
     .block-container {
-        padding-top: 1rem; /* Puoi mettere anche 0rem se lo vuoi completamente attaccato al bordo */
+        padding-top: 1rem;
         padding-bottom: 1rem;
     }
     
@@ -50,22 +57,30 @@ st.markdown("""
         margin-right: 15px;
     }
     
+    /* NUOVO BADGE PER LE LINEE */
+    .badge-line {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 20px;
+        margin-right: 15px;
+        flex-shrink: 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    
     .icon {
         font-family: 'Material Symbols Rounded';
         font-size: 28px;
         color: #64748b;
-        margin-right: 12px;
+        margin-right: 8px;
         display: flex;
         align-items: center;
-        flex-shrink: 0;
-    }
-    
-    .line-name {
-        font-weight: 800;
-        font-size: 20px;
-        width: 65px;
-        color: #0f172a;
-        flex-shrink: 0;
     }
     
     .destination {
@@ -86,8 +101,17 @@ st.markdown("""
         flex-shrink: 0;
     }
     
-    .det-bin { width: 80px; font-weight: 700; font-size:20px; color: #1e40af; }
-    .det-time { width: 75px; font-weight: 900; font-size:20px; text-align: center; }
+    .det-bin { width: 80px; font-weight: 800; color: #1e40af; }
+    
+    /* ORARIO INGRANDITO */
+    .det-time { 
+        width: 75px; 
+        font-weight: 900; 
+        font-size: 22px; 
+        text-align: center; 
+    }
+    
+    /* RITARDO INGRANDITO E ALLARGATO */
     .det-status { width: 115px; text-align: center; }
     
     .status-badge {
@@ -116,7 +140,6 @@ st.markdown("""
         gap: 8px;
     }
 
-    /* Stile per il bottone di caricamento */
     .stButton>button {
         width: 100%;
         background-color: #e2e8f0;
@@ -131,6 +154,7 @@ st.markdown("""
     .stButton>button:hover { background-color: #cbd5e1; color: #0f172a;}
 
     @media (max-width: 680px) {
+        .block-container { padding-top: 0.5rem; }
         .transport-row {
             flex-direction: column;
             align-items: flex-start;
@@ -164,6 +188,16 @@ MAPPA_LINEE_S = {
     "MILANO BOVISA POLITECNICO": "S13" 
 }
 
+COLORI_LINEE = {
+    "S1": "#E32B26",  # Rosso
+    "S2": "#007A33",  # Verde scuro
+    "S5": "#FF9900",  # Arancione
+    "S6": "#00A5E3",  # Azzurro
+    "S12": "#A61B2B", # Bordeaux
+    "S13": "#C6007E", # Magenta
+    "BUS": "#16a34a"  # Verde ATM
+}
+
 @dataclass
 class FermataAtm:
     nome_identificativo: str
@@ -182,7 +216,7 @@ fermate_atm = [
     FermataAtm(nome_identificativo="91 Jenner -> Lotto", poi_id="5641333")
 ]
 
-@st.cache_data(ttl=30) # Aggiunta cache leggera per evitare chiamate se si preme + velocemente
+@st.cache_data(ttl=30)
 def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
     dt_rome = datetime.now(ZoneInfo("Europe/Rome"))
     orario_attuale = dt_rome.strftime("%a %b %d %Y %H:%M:%S GMT%z")
@@ -207,28 +241,32 @@ def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
                     "ritardo": treno.get("ritardo", 0),
                     "binario": binario
                 }) 
-        # RIMOSSO IL LIMITE DI 5 TRENI QUI!
         return treni_monitor
     except Exception:
         return []
 
-def get_atm(fermata: FermataAtm, session: requests_cffi.Session) -> List[Dict[str, Any]]:
-    url = f"https://giromilano.atm.it/proxy.tpportal/api/tpPortal/geodata/pois/{fermata.poi_id}?lang=it"
+# Aggiunta Cache anche per gli autobus (ttl=20 secondi)
+@st.cache_data(ttl=20)
+def get_atm(nome_identificativo: str, poi_id: str) -> List[Dict[str, Any]]:
+    url = f"https://giromilano.atm.it/proxy.tpportal/api/tpPortal/geodata/pois/{poi_id}?lang=it"
     try:
-        response = session.get(url, headers=HEADERS_ATM, timeout=10)
-        if response.status_code != 200: return []
-        fermata_json = response.json()
-        nome_fermata = fermata_json.get("Description", fermata.nome_identificativo)
-        bus_monitor = []
-        for bus in fermata_json.get("Lines", []):
-            dati_linea = bus.get("Line", {})
-            bus_monitor.append({
-                "fermata": nome_fermata,
-                "linea": dati_linea.get("LineCode", "-"),
-                "destinazione": dati_linea.get("LineDescription", "N/D"),
-                "attesa": bus.get("WaitMessage", "-")
-            })
-        return bus_monitor
+        # Creiamo la sessione internamente alla funzione per permettere il caching di Streamlit
+        with requests_cffi.Session(impersonate="chrome110") as session:
+            session.get("https://giromilano.atm.it/", headers=HEADERS_ATM, timeout=10)
+            response = session.get(url, headers=HEADERS_ATM, timeout=10)
+            if response.status_code != 200: return []
+            fermata_json = response.json()
+            nome_fermata = fermata_json.get("Description", nome_identificativo)
+            bus_monitor = []
+            for bus in fermata_json.get("Lines", []):
+                dati_linea = bus.get("Line", {})
+                bus_monitor.append({
+                    "fermata": nome_fermata,
+                    "linea": dati_linea.get("LineCode", "-"),
+                    "destinazione": dati_linea.get("LineDescription", "N/D"),
+                    "attesa": bus.get("WaitMessage", "-")
+                })
+            return bus_monitor
     except Exception:
         return []
 
@@ -236,6 +274,7 @@ def get_atm(fermata: FermataAtm, session: requests_cffi.Session) -> List[Dict[st
 ora_attuale_dt = datetime.now(ZoneInfo('Europe/Rome'))
 ora_attuale = ora_attuale_dt.strftime('%H:%M')
 ora_corrente = ora_attuale_dt.hour
+secondi_attuali = ora_attuale_dt.strftime('%H:%M:%S')
 
 st.markdown(f"""
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
@@ -251,9 +290,8 @@ if inizio_pausa <= ora_corrente < fine_pausa:
     st.rerun()
 
 # ==========================================
-# SEZIONE TRENI CON FILTRO E TASTO +
+# SEZIONE TRENI
 # ==========================================
-# Impostiamo le colonne per avere Titolo e Selettore sulla stessa riga
 col_title, col_filter = st.columns([3, 1])
 
 with col_title:
@@ -262,11 +300,10 @@ with col_title:
 with col_filter:
     filtro_scelto = st.selectbox(
         "Filtro", 
-        ["Tutti", "BIN. 1", "BIN. 2",  "BIN. 3", "BIN. 4","BIN. 1 e 2", "BIN. 3 e 4"],
+        ["Tutti", "Binario 1", "Binario 2", "Binari 1 e 2", "Binario 3", "Binario 4", "Binari 3 e 4"],
         label_visibility="collapsed"
     )
 
-# Se l'utente ha cambiato il filtro, resettiamo il conteggio a 5 treni
 if filtro_scelto != st.session_state.filtro_precedente:
     st.session_state.num_treni = 5
     st.session_state.filtro_precedente = filtro_scelto
@@ -274,20 +311,17 @@ if filtro_scelto != st.session_state.filtro_precedente:
 treni_data = get_treni("S01643")
 
 if treni_data:
-    # 1. Filtriamo i treni in base alla selezione
     treni_filtrati = []
     for t in treni_data:
         b = str(t['binario'])
-        if filtro_scelto == "Tutti":
-            treni_filtrati.append(t)
-        elif filtro_scelto == "BIN. 1" and b == "1": treni_filtrati.append(t)
-        elif filtro_scelto == "BIN. 2" and b == "2": treni_filtrati.append(t)
-        elif filtro_scelto == "BIN. 1 e 2" and b in ["1", "2"]: treni_filtrati.append(t)
-        elif filtro_scelto == "BIN. 3" and b == "3": treni_filtrati.append(t)
-        elif filtro_scelto == "BIN. 4" and b == "4": treni_filtrati.append(t)
-        elif filtro_scelto == "BIN. 3 e 4" and b in ["3", "4"]: treni_filtrati.append(t)
+        if filtro_scelto == "Tutti": treni_filtrati.append(t)
+        elif filtro_scelto == "Binario 1" and b == "1": treni_filtrati.append(t)
+        elif filtro_scelto == "Binario 2" and b == "2": treni_filtrati.append(t)
+        elif filtro_scelto == "Binari 1 e 2" and b in ["1", "2"]: treni_filtrati.append(t)
+        elif filtro_scelto == "Binario 3" and b == "3": treni_filtrati.append(t)
+        elif filtro_scelto == "Binario 4" and b == "4": treni_filtrati.append(t)
+        elif filtro_scelto == "Binari 3 e 4" and b in ["3", "4"]: treni_filtrati.append(t)
 
-    # 2. Selezioniamo solo il numero di treni stabilito dallo stato (di base 5)
     treni_da_mostrare = treni_filtrati[:st.session_state.num_treni]
 
     if not treni_da_mostrare:
@@ -301,12 +335,14 @@ if treni_data:
             else:
                 stato_css = "status-good"
                 stato_txt = "In orario"
+            
+            # Prende il colore dal dizionario, se non lo trova usa un grigio di default (#94a3b8)
+            colore_badge = COLORI_LINEE.get(t['linea'], "#94a3b8")
                 
             riga_html = f"""
             <div class="transport-row">
                 <div class="main-info">
-                    <span class="icon">train</span>
-                    <div class="line-name">{t['linea']}</div>
+                    <div class="badge-line" style="background-color: {colore_badge};">{t['linea']}</div>
                     <div class="destination">{t['destinazione']}</div>
                 </div>
                 <div class="details">
@@ -320,58 +356,64 @@ if treni_data:
             """
             st.markdown(riga_html, unsafe_allow_html=True)
         
-        # 3. Tasto "+" se ci sono altri treni disponibili non ancora mostrati
         if len(treni_filtrati) > st.session_state.num_treni:
             if st.button("➕ Carica altri 5 treni", use_container_width=True):
                 st.session_state.num_treni += 5
                 st.rerun()
-
 else:
     st.info("Nessun treno in partenza.")
 
 # ==========================================
-# SEZIONE BUS ATM (Invariata)
+# SEZIONE BUS ATM
 # ==========================================
 st.markdown('<div class="section-title"><span class="icon" style="color: #16a34a;">directions_bus</span> Bus & Filobus</div>', unsafe_allow_html=True)
 
 try:
-    with requests_cffi.Session(impersonate="chrome110") as s:
-        s.get("https://giromilano.atm.it/", headers=HEADERS_ATM, timeout=10)
-        bus_trovati = False
-        
-        for fermata in fermate_atm:
-            buses_data = get_atm(fermata, s)
-            if buses_data:
-                bus_trovati = True
-                for b in buses_data:
-                    attesa = b['attesa'].lower()
-                    if "in arrivo" in attesa: stato_css = "status-good"
-                    elif "min" in attesa: stato_css = "status-wait"
-                    else: stato_css = "status-neutral"
-                    
-                    riga_html = f"""
-                    <div class="transport-row">
-                        <div class="main-info">
-                            <span class="icon">directions_bus</span>
-                            <div class="line-name">{b['linea']}</div>
-                            <div class="destination">{b['destinazione'].split('-')[-1].split('(')[0].strip()}</div>
-                        </div>
-                        <div class="details">
-                            <div class="det-bin" style="color:#64748b; font-weight:normal;">{b['fermata']}</div>
-                            <div class="det-time"></div>
-                            <div class="det-status">
-                                <span class="status-badge {stato_css}">{b['attesa']}</span>
-                            </div>
+    bus_trovati = False
+    for fermata in fermate_atm:
+        buses_data = get_atm(fermata.nome_identificativo, fermata.poi_id)
+        if buses_data:
+            bus_trovati = True
+            for b in buses_data:
+                attesa = b['attesa'].lower()
+                if "in arrivo" in attesa: stato_css = "status-good"
+                elif "min" in attesa: stato_css = "status-wait"
+                else: stato_css = "status-neutral"
+                
+                # Badge per l'autobus, sempre verde ATM
+                colore_badge = COLORI_LINEE["BUS"]
+                
+                riga_html = f"""
+                <div class="transport-row">
+                    <div class="main-info">
+                        <div class="badge-line" style="background-color: {colore_badge};">{b['linea']}</div>
+                        <div class="destination">per {b['destinazione'].split('-')[-1].split('(')[0].strip()}</div>
+                    </div>
+                    <div class="details">
+                        <div class="det-bin" style="color:#64748b; font-weight:normal;">{b['fermata']}</div>
+                        <div class="det-time"></div>
+                        <div class="det-status">
+                            <span class="status-badge {stato_css}">{b['attesa']}</span>
                         </div>
                     </div>
-                    """
-                    st.markdown(riga_html, unsafe_allow_html=True)
-        if not bus_trovati:
-            st.markdown('<div style="color: #94a3b8; font-size: 15px; margin-left: 5px;">Nessun bus in arrivo o dati non disponibili</div>', unsafe_allow_html=True)
+                </div>
+                """
+                st.markdown(riga_html, unsafe_allow_html=True)
+                
+    if not bus_trovati:
+        st.markdown('<div style="color: #94a3b8; font-size: 15px; margin-left: 5px;">Nessun bus in arrivo o dati non disponibili</div>', unsafe_allow_html=True)
 
 except Exception as e:
     st.warning("⚠️ Servizio API ATM momentaneamente irraggiungibile.")
 
-# Auto-refresh ogni 60 secondi
+# ==========================================
+# FOOTER AGGIORNAMENTO
+# ==========================================
+st.markdown(f"""
+<div style="text-align: center; color: #94a3b8; font-size: 14px; margin-top: 25px; margin-bottom: 15px;">
+    Ultimo aggiornamento: <b>{secondi_attuali}</b> • Auto-refresh ogni 60s
+</div>
+""", unsafe_allow_html=True)
+
 time.sleep(60)
 st.rerun()
