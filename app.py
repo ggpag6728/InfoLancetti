@@ -325,6 +325,8 @@ try:
                             <div class="destination">per {b['destinazione'].split('-')[-1].split('(')[0].strip()}</div>
                         </div>
                         <div class="details">
+                            <div class="det-bin" style="color:#64748b; font-weight:normal;">{b['fermata']}</div>
+                            <div class="det-time"></div>
                             <div class="det-status">
                                 <span class="status-badge {stato_css}">{b['attesa']}</span>
                             </div>
