@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 if "num_treni" not in st.session_state:
     st.session_state.num_treni = 5
 if "filtro_precedente" not in st.session_state:
-    st.session_state.filtro_precedente = "Tutti"
+    st.session_state.filtro_precedente = "Tutti i binari"
 
 # --- CONFIGURAZIONE PAGINA ---
 st.set_page_config(page_title="Infotrasporti Milano Lancetti", layout="wide", initial_sidebar_state="collapsed")
@@ -190,7 +190,7 @@ def individua_linea(treno: Dict[str, Any]) -> str:
     if "VARESE" in dest or "TREVIGLIO" in dest: return "S5"
     if "NOVARA" in dest or "PIOLTELLO" in dest: return "S6"
     if "MELEGNANO" in dest or "CORMANO" in dest: return "S12"
-    if "PAVIA" in dest or "GARBAGNATE" in dest: return "S13"
+    if "PAVIA" in dest or "GARBAGNATE" or "BOVISA" in dest: return "S13"
     
     return "--"
 
@@ -226,16 +226,19 @@ def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
         
         treni_monitor = []
         for treno in treni_json:
-            if not treno.get("arrivato", False):
+            # MODIFICA: Scartiamo i treni già arrivati e quelli NON circolanti (cancellati)
+            # Usiamo .get("circolante", True) così se il campo manca assumiamo che circoli
+            if not treno.get("arrivato", False) and treno.get("circolante", True):
                 destinazione = treno.get("destinazione", "N/D")
                 binario = str(treno.get("binarioEffettivoPartenzaDescrizione") or 
                               treno.get("binarioProgrammatoPartenzaDescrizione") or "-").strip()
                 treni_monitor.append({
-                    "linea": individua_linea(treno), # <-- Nuovo sistema di calcolo
+                    "linea": individua_linea(treno),
                     "destinazione": destinazione,
                     "orario": treno.get("compOrarioPartenza", "--:--"),
                     "ritardo": treno.get("ritardo", 0),
-                    "binario": binario
+                    "binario": binario,
+                    "non_partito": treno.get("nonPartito", False) # <-- Aggiunto salvataggio del dato
                 }) 
         return treni_monitor
     except Exception:
@@ -310,7 +313,7 @@ if treni_data:
     treni_filtrati = []
     for t in treni_data:
         b = str(t['binario'])
-        if filtro_scelto == "Tutti": treni_filtrati.append(t)
+        if filtro_scelto == "Tutti i binari": treni_filtrati.append(t)
         elif filtro_scelto == "Binario 1" and b == "1": treni_filtrati.append(t)
         elif filtro_scelto == "Binario 2" and b == "2": treni_filtrati.append(t)
         elif filtro_scelto == "Binari 1 e 2" and b in ["1", "2"]: treni_filtrati.append(t)
@@ -325,7 +328,15 @@ if treni_data:
     else:
         for t in treni_da_mostrare:
             ritardo_val = t['ritardo']
-            if ritardo_val > 0:
+            is_non_partito = t.get('non_partito', False)
+            
+            # MODIFICA: Logica per lo stato del treno
+            if is_non_partito:
+                # Se non è partito, ignoriamo il ritardo attuale e mostriamo "Non partito"
+                # Usiamo status-neutral che hai già definito nel CSS (sfondo grigio)
+                stato_css = "status-neutral"
+                stato_txt = "Non partito"
+            elif ritardo_val > 0:
                 stato_css = "status-bad"
                 stato_txt = f"+{ritardo_val}'"
             else:
