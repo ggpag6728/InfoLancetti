@@ -27,8 +27,8 @@ st.markdown("""
         --secondary-background-color: #ffffff !important;
         background-color: #f8fafc !important;
         color: #0f172a !important;
-    }
-    
+    }   
+            
     header {visibility: hidden;}
     
     .block-container {
@@ -135,6 +135,7 @@ st.markdown("""
         width: 100%;
         background-color: #e2e8f0;
         color: #0f172a;
+        font-family: inherit !important;
         font-weight: 600;
         border: none;
         border-radius: 8px;
@@ -344,11 +345,18 @@ if treni_data:
                 stato_txt = "In orario"
             
             colore_badge = COLORI_LINEE.get(t['linea'], "#94a3b8")
+            
+            # --- NUOVA LOGICA ICONA ---
+            if t['linea'] == "--":
+                # Se la linea non è riconosciuta, inseriamo l'icona di Google Fonts
+                contenuto_badge = '<span style="font-family: \'Material Symbols Rounded\'; font-size: 24px;">train</span>'
+            else:
+                contenuto_badge = t['linea']
                 
             riga_html = f"""
             <div class="transport-row">
                 <div class="main-info">
-                    <div class="badge-line" style="background-color: {colore_badge};">{t['linea']}</div>
+                    <div class="badge-line" style="background-color: {colore_badge};">{contenuto_badge}</div>
                     <div class="destination">{t['destinazione']}</div>
                 </div>
                 <div class="details">
@@ -414,6 +422,144 @@ except Exception as e:
 # ==========================================
 # FOOTER AGGIORNAMENTO
 # ==========================================
+
+# ==========================================
+# SEZIONE ALTRE STAZIONI (On-Demand)
+# ==========================================
+st.markdown('<div class="section-title"><span class="icon" style="color: #8b5cf6;">add_location_alt</span>Altre stazioni</div>', unsafe_allow_html=True)
+
+# Definiamo i dati salvati in memoria. 
+ALTRE_STAZIONI_TRENO = {
+    "Milano Porta Garibaldi": "S01647",
+    "Milano Repubblica": "S01648",
+    "Milano Bovisa Politecnico": "S01642",
+    "Milano Rogoredo": "S01820",
+    "S.Donato Milanese": "S01624"
+}
+
+ALTRE_FERMATE_BUS = {
+    "Bernina: 90/92 -> Lodi M3": "5641489",
+    "V.le Sauro Via Oldofredi: 91/92 -> Bovisa": "5641708",
+}
+
+# --- 1. MEMORIA DELLO STATO ---
+# Creiamo una variabile in sessione per ricordare quale tasto è stato premuto
+if "tipo_trasporto_extra" not in st.session_state:
+    st.session_state.tipo_trasporto_extra = None
+
+# --- 2. PULSANTI INTERATTIVI ---
+col_btn1, col_btn2 = st.columns(2)
+
+with col_btn1:
+    # Se il tasto treno è attivo, lo evidenziamo col colore "primary", altrimenti "secondary"
+    stile_treno = "primary" if st.session_state.tipo_trasporto_extra == "Treno" else "secondary"
+    if st.button("Cerca Treni", type=stile_treno, use_container_width=True):
+        st.session_state.tipo_trasporto_extra = "Treno"
+        st.rerun() # Ricarica la pagina per mostrare subito le opzioni
+
+with col_btn2:
+    stile_bus = "primary" if st.session_state.tipo_trasporto_extra == "Bus" else "secondary"
+    if st.button("Cerca Bus", type=stile_bus, use_container_width=True):
+        st.session_state.tipo_trasporto_extra = "Bus"
+        st.rerun()
+
+# --- 3. MENU A TENDINA A COMPARSA ---
+# Questo blocco compare SOLO se uno dei due tasti è stato premuto
+if st.session_state.tipo_trasporto_extra:
+    
+    if st.session_state.tipo_trasporto_extra == "Treno":
+        lista_opzioni = ["-- Seleziona stazione --"] + list(ALTRE_STAZIONI_TRENO.keys())
+    else:
+        lista_opzioni = ["-- Seleziona fermata --"] + list(ALTRE_FERMATE_BUS.keys())
+        
+    # Usiamo il parametro 'key' così Streamlit ricorda la selezione anche durante il refresh automatico di 60s
+    selezione = st.selectbox(
+        f"Seleziona quale {st.session_state.tipo_trasporto_extra.lower()} monitorare:", 
+        lista_opzioni,
+        key="menu_selezione_extra"
+    )
+
+    # --- 4. RECUPERO E MOSTRA DATI ON-DEMAND ---
+    # Viene eseguito solo se si fa una scelta effettiva
+    if selezione != "-- Seleziona stazione --" and selezione != "-- Seleziona fermata --":
+        
+        if st.session_state.tipo_trasporto_extra == "Treno":
+            codice_stazione_scelta = ALTRE_STAZIONI_TRENO[selezione]
+            with st.spinner(f"Ricerca treni per {selezione}..."):
+                treni_extra = get_treni(codice_stazione_scelta)
+                
+            if treni_extra:
+                for t in treni_extra[:10]: # Mostriamo i primi 10
+                    ritardo_val = t['ritardo']
+                    is_non_partito = t.get('non_partito', False)
+                    
+                    if is_non_partito:
+                        stato_css, stato_txt = "status-neutral", "Non partito"
+                    elif ritardo_val > 0:
+                        stato_css, stato_txt = "status-bad", f"+{ritardo_val}'"
+                    else:
+                        stato_css, stato_txt = "status-good", "In orario"
+                    
+                    colore_badge = COLORI_LINEE.get(t['linea'], "#94a3b8")
+                    
+                    # --- NUOVA LOGICA ICONA ---
+                    if t['linea'] == "--":
+                        contenuto_badge = '<span style="font-family: \'Material Symbols Rounded\'; font-size: 24px;">train</span>'
+                    else:
+                        contenuto_badge = t['linea']
+                    
+                    riga_html = f"""
+                    <div class="transport-row">
+                        <div class="main-info">
+                            <div class="badge-line" style="background-color: {colore_badge};">{contenuto_badge}</div>
+                            <div class="destination">{t['destinazione']}</div>
+                        </div>
+                        <div class="details">
+                            <div class="det-bin">BIN. {t['binario']}</div>
+                            <div class="det-time">{t['orario']}</div>
+                            <div class="det-status">
+                                <span class="status-badge {stato_css}">{stato_txt}</span>
+                            </div>
+                        </div>
+                    </div>
+                    """
+                    st.markdown(riga_html, unsafe_allow_html=True)
+            else:
+                st.info(f"Nessun treno in partenza da {selezione} al momento.")
+
+        elif st.session_state.tipo_trasporto_extra == "Bus":
+            poi_id_scelto = ALTRE_FERMATE_BUS[selezione]
+            with st.spinner(f"Ricerca bus per {selezione}..."):
+                bus_extra = get_atm(selezione, poi_id_scelto)
+                
+            if bus_extra:
+                for b in bus_extra:
+                    attesa = b['attesa'].lower()
+                    if "in arrivo" in attesa: stato_css = "status-good"
+                    elif "min" in attesa: stato_css = "status-wait"
+                    else: stato_css = "status-neutral"
+                    
+                    colore_badge = COLORI_LINEE["BUS"]
+                    
+                    riga_html = f"""
+                    <div class="transport-row">
+                        <div class="main-info">
+                            <div class="badge-line" style="background-color: {colore_badge};">{b['linea']}</div>
+                            <div class="destination">{b['destinazione'].split('-')[-1].split('(')[0].strip()}</div>
+                        </div>
+                        <div class="details">
+                            <div class="det-bin" style="color:#64748b; font-weight:normal;">{b['fermata']}</div>
+                            <div class="det-time"></div>
+                            <div class="det-status">
+                                <span class="status-badge {stato_css}">{b['attesa']}</span>
+                            </div>
+                        </div>
+                    </div>
+                    """
+                    st.markdown(riga_html, unsafe_allow_html=True)
+            else:
+                st.info(f"Nessun bus in arrivo a {selezione} al momento.")
+
 st.markdown(f"""
 <div style="text-align: center; color: #94a3b8; font-size: 14px; margin-top: 25px; margin-bottom: 15px;">
     Ultimo aggiornamento: <b>{secondi_attuali}</b> • Auto-refresh ogni 60s
