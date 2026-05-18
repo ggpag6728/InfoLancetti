@@ -190,7 +190,7 @@ def individua_linea(treno: Dict[str, Any]) -> str:
     if "VARESE" in dest or "TREVIGLIO" in dest: return "S5"
     if "NOVARA" in dest or "PIOLTELLO" in dest: return "S6"
     if "MELEGNANO" in dest or "CORMANO" in dest: return "S12"
-    if "PAVIA" in dest or "GARBAGNATE" or "BOVISA" in dest: return "S13"
+    if "PAVIA" in dest or "GARBAGNATE" in dest: return "S13"
     
     return "--"
 
@@ -226,19 +226,16 @@ def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
         
         treni_monitor = []
         for treno in treni_json:
-            # MODIFICA: Scartiamo i treni già arrivati e quelli NON circolanti (cancellati)
-            # Usiamo .get("circolante", True) così se il campo manca assumiamo che circoli
-            if not treno.get("arrivato", False) and treno.get("circolante", True):
+            if not treno.get("arrivato", False):
                 destinazione = treno.get("destinazione", "N/D")
                 binario = str(treno.get("binarioEffettivoPartenzaDescrizione") or 
                               treno.get("binarioProgrammatoPartenzaDescrizione") or "-").strip()
                 treni_monitor.append({
-                    "linea": individua_linea(treno),
+                    "linea": individua_linea(treno), # <-- Nuovo sistema di calcolo
                     "destinazione": destinazione,
                     "orario": treno.get("compOrarioPartenza", "--:--"),
                     "ritardo": treno.get("ritardo", 0),
-                    "binario": binario,
-                    "non_partito": treno.get("nonPartito", False) # <-- Aggiunto salvataggio del dato
+                    "binario": binario
                 }) 
         return treni_monitor
     except Exception:
@@ -328,15 +325,7 @@ if treni_data:
     else:
         for t in treni_da_mostrare:
             ritardo_val = t['ritardo']
-            is_non_partito = t.get('non_partito', False)
-            
-            # MODIFICA: Logica per lo stato del treno
-            if is_non_partito:
-                # Se non è partito, ignoriamo il ritardo attuale e mostriamo "Non partito"
-                # Usiamo status-neutral che hai già definito nel CSS (sfondo grigio)
-                stato_css = "status-neutral"
-                stato_txt = "Non partito"
-            elif ritardo_val > 0:
+            if ritardo_val > 0:
                 stato_css = "status-bad"
                 stato_txt = f"+{ritardo_val}'"
             else:
