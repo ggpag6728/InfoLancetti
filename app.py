@@ -190,7 +190,7 @@ def individua_linea(treno: Dict[str, Any]) -> str:
     if "VARESE" in dest or "TREVIGLIO" in dest: return "S5"
     if "NOVARA" in dest or "PIOLTELLO" in dest: return "S6"
     if "MELEGNANO" in dest or "CORMANO" in dest: return "S12"
-    if "PAVIA" in dest or "GARBAGNATE" in dest: return "S13"
+    if "PAVIA" in dest or "GARBAGNATE" or "BOVISA" in dest: return "S13"
     
     return "--"
 
@@ -226,16 +226,19 @@ def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
         
         treni_monitor = []
         for treno in treni_json:
-            if not treno.get("arrivato", False):
+            # MODIFICA: Scartiamo i treni già arrivati e quelli NON circolanti (cancellati)
+            # Usiamo .get("circolante", True) così se il campo manca assumiamo che circoli
+            if not treno.get("arrivato", False) and treno.get("circolante", True):
                 destinazione = treno.get("destinazione", "N/D")
                 binario = str(treno.get("binarioEffettivoPartenzaDescrizione") or 
                               treno.get("binarioProgrammatoPartenzaDescrizione") or "-").strip()
                 treni_monitor.append({
-                    "linea": individua_linea(treno), # <-- Nuovo sistema di calcolo
+                    "linea": individua_linea(treno),
                     "destinazione": destinazione,
                     "orario": treno.get("compOrarioPartenza", "--:--"),
                     "ritardo": treno.get("ritardo", 0),
-                    "binario": binario
+                    "binario": binario,
+                    "non_partito": treno.get("nonPartito", False) # <-- Aggiunto salvataggio del dato
                 }) 
         return treni_monitor
     except Exception:
@@ -279,7 +282,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-inizio_pausa, fine_pausa = 1, 5
+inizio_pausa, fine_pausa = 1, 6
 if inizio_pausa <= ora_corrente < fine_pausa:
     st.info(f"🌙 **Sospensione notturna attiva ({inizio_pausa}:00 - {fine_pausa}:00).** Il monitoraggio riprenderà in automatico.")
     time.sleep(60)
@@ -296,7 +299,7 @@ with col_title:
 with col_filter:
     filtro_scelto = st.selectbox(
         "Filtro", 
-        ["Tutti", "Binario 1", "Binario 2", "Binari 1 e 2", "Binario 3", "Binario 4", "Binari 3 e 4"],
+        ["Tutti i binari", "Binario 1", "Binario 2",  "Binario 3", "Binario 4","Binari 1 e 2", "Binari 3 e 4"],
         label_visibility="collapsed"
     )
 
@@ -325,7 +328,15 @@ if treni_data:
     else:
         for t in treni_da_mostrare:
             ritardo_val = t['ritardo']
-            if ritardo_val > 0:
+            is_non_partito = t.get('non_partito', False)
+            
+            # MODIFICA: Logica per lo stato del treno
+            if is_non_partito:
+                # Se non è partito, ignoriamo il ritardo attuale e mostriamo "Non partito"
+                # Usiamo status-neutral che hai già definito nel CSS (sfondo grigio)
+                stato_css = "status-neutral"
+                stato_txt = "Non partito"
+            elif ritardo_val > 0:
                 stato_css = "status-bad"
                 stato_txt = f"+{ritardo_val}'"
             else:
