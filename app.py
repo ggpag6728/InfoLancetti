@@ -191,7 +191,7 @@ def individua_linea(treno: Dict[str, Any]) -> str:
     if "VARESE" in dest or "TREVIGLIO" in dest: return "S5"
     if "NOVARA" in dest or "PIOLTELLO" in dest: return "S6"
     if "MELEGNANO" in dest or "CORMANO" in dest: return "S12"
-    if "PAVIA" in dest or "GARBAGNATE" or "BOVISA" in dest: return "S13"
+    if "PAVIA" in dest or "GARBAGNATE" in dest or "BOVISA" in dest: return "S13"
     
     return "--"
 
