@@ -131,7 +131,8 @@ st.markdown("""
         gap: 8px;
     }
 
-    .stButton>button {
+    /* Pulsanti NON selezionati (Secondari) */
+    .stButton > button[kind="secondary"] {
         width: 100%;
         background-color: #e2e8f0;
         color: #0f172a;
@@ -143,7 +144,28 @@ st.markdown("""
         margin-top: 5px;
         transition: all 0.2s;
     }
-    .stButton>button:hover { background-color: #cbd5e1; color: #0f172a;}
+    .stButton > button[kind="secondary"]:hover { 
+        background-color: #cbd5e1; 
+        color: #0f172a;
+    }
+
+    /* Pulsante SELEZIONATO (Primario) */
+    .stButton > button[kind="primary"] {
+        width: 100%;
+        background-color: #2563eb; /* Colore blu evidente per indicare la selezione */
+        color: #ffffff !important;
+        font-family: inherit !important;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        padding: 10px;
+        margin-top: 5px;
+        transition: all 0.2s;
+    }
+    .stButton > button[kind="primary"]:hover { 
+        background-color: #1d4ed8; 
+        color: #ffffff !important;
+    }
 
     @media (max-width: 680px) {
         .block-container { padding-top: 0.5rem; }
