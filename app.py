@@ -440,7 +440,7 @@ ALTRE_STAZIONI_TRENO = {
 ALTRE_FERMATE_BUS = {
     "Bernina: 90/92 -> Lodi M3": "5641489",
     "V.le Sauro Via Oldofredi: 91/92 -> Bovisa": "5641708",
-    "Bausan: 92 -> Lodi M3 : "5641324",
+    "Bausan: 92 -> Lodi M3" : "5641324",
 }
 
 # --- 1. MEMORIA DELLO STATO ---
