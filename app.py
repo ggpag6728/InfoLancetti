@@ -474,16 +474,21 @@ if "tipo_trasporto_extra" not in st.session_state:
 col_btn1, col_btn2 = st.columns(2)
 
 with col_btn1:
-    # Se il tasto treno è attivo, lo evidenziamo col colore "primary", altrimenti "secondary"
     stile_treno = "primary" if st.session_state.tipo_trasporto_extra == "Treno" else "secondary"
     if st.button("Cerca Treni", type=stile_treno, use_container_width=True):
-        st.session_state.tipo_trasporto_extra = "Treno"
-        st.rerun() # Ricarica la pagina per mostrare subito le opzioni
+        # Se stiamo cambiando da Bus a Treno, cancelliamo la vecchia selezione
+        if st.session_state.tipo_trasporto_extra != "Treno":
+            st.session_state.tipo_trasporto_extra = "Treno"
+            st.session_state.pop("menu_selezione_extra", None) # Svuota la tendina
+        st.rerun()
 
 with col_btn2:
     stile_bus = "primary" if st.session_state.tipo_trasporto_extra == "Bus" else "secondary"
     if st.button("Cerca Bus", type=stile_bus, use_container_width=True):
-        st.session_state.tipo_trasporto_extra = "Bus"
+        # Se stiamo cambiando da Treno a Bus, cancelliamo la vecchia selezione
+        if st.session_state.tipo_trasporto_extra != "Bus":
+            st.session_state.tipo_trasporto_extra = "Bus"
+            st.session_state.pop("menu_selezione_extra", None) # Svuota la tendina
         st.rerun()
 
 # --- 3. MENU A TENDINA A COMPARSA ---
