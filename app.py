@@ -229,10 +229,10 @@ HEADERS_ATM = {
 }
 
 fermate_atm = [
-    FermataAtm(nome_identificativo="92 Lancetti -> Bovisa", poi_id="5641319"),
+    FermataAtm(nome_identificativo="92 Lancetti -> Bovisa", poi_id="5648093"),
     FermataAtm(nome_identificativo="92 Lancetti -> Lodi", poi_id="5651159"),
-    FermataAtm(nome_identificativo="90 Jenner -> Lodi", poi_id="5641332"),
-    FermataAtm(nome_identificativo="91 Jenner -> Lotto", poi_id="5641333")
+    FermataAtm(nome_identificativo="90 Jenner -> Lodi", poi_id="5648106"),
+    FermataAtm(nome_identificativo="91 Jenner -> Lotto", poi_id="5648107")
 ]
 
 @st.cache_data(ttl=30)
@@ -472,9 +472,9 @@ ALTRE_STAZIONI_TRENO = {
 }
 
 ALTRE_FERMATE_BUS = {
-    "Bernina: 90/92 -> Lodi M3": "5641489",
-    "V.le Sauro Via Oldofredi: 91/92 -> Bovisa": "5641708",
-    "Bausan: 92 -> Lodi M3" : "5641324",
+    "Bernina: 90/92 -> Lodi M3": "5648263",
+    "V.le Sauro Via Oldofredi: 91/92 -> Bovisa": "5648482",
+    "Bausan: 92 -> Lodi M3" : "5648098",
 }
 
 # --- 1. MEMORIA DELLO STATO ---
