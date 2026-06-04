@@ -230,7 +230,7 @@ HEADERS_ATM = {
 
 fermate_atm = [
     FermataAtm(nome_identificativo="92 Lancetti -> Bovisa", poi_id="5641319"),
-    FermataAtm(nome_identificativo="92 Lancetti -> Lodi", poi_id="5644379"),
+    FermataAtm(nome_identificativo="92 Lancetti -> Lodi", poi_id="5651159"),
     FermataAtm(nome_identificativo="90 Jenner -> Lodi", poi_id="5641332"),
     FermataAtm(nome_identificativo="91 Jenner -> Lotto", poi_id="5641333")
 ]
