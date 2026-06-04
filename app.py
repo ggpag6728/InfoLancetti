@@ -269,15 +269,24 @@ def get_treni(codice_stazione: str) -> List[Dict[str, Any]]:
 
 @st.cache_data(ttl=20)
 def get_atm(nome_identificativo: str, poi_id: str) -> List[Dict[str, Any]]:
-    url = f"https://giromilano.atm.it/proxy.tpportal/api/tpPortal/geodata/pois/{poi_id}?lang=it"
+    # L'URL ORA DEVE ESSERE URL-ENCODED NELLA PARTE FINALE
+    url = f"https://giromilano.atm.it/proxy.tpportal/api/tpPortal/geodata%2Fpois%2F{poi_id}%3Flang%3Dit"
     try:
-        with requests_cffi.Session(impersonate="chrome110") as session:
+        # Aggiorniamo l'impersonificazione a un browser più recente
+        with requests_cffi.Session(impersonate="chrome120") as session:
+            
+            # 1. Chiamata alla home per ottenere i cookie WAF (TS01...) e di sessione
             session.get("https://giromilano.atm.it/", headers=HEADERS_ATM, timeout=10)
+            
+            # 2. Chiamata all'API con la sintassi aggiornata
             response = session.get(url, headers=HEADERS_ATM, timeout=10)
+            
             if response.status_code != 200: return []
+            
             fermata_json = response.json()
             nome_fermata = fermata_json.get("Description", nome_identificativo)
             bus_monitor = []
+            
             for bus in fermata_json.get("Lines", []):
                 dati_linea = bus.get("Line", {})
                 bus_monitor.append({
@@ -287,7 +296,10 @@ def get_atm(nome_identificativo: str, poi_id: str) -> List[Dict[str, Any]]:
                     "attesa": bus.get("WaitMessage", "-")
                 })
             return bus_monitor
-    except Exception:
+            
+    except Exception as e:
+        # Piccolo trucco: stampiamo in console eventuali altri errori senza fermare Streamlit
+        print(f"Errore recupero ATM: {e}")
         return []
 
 # --- INTERFACCIA WEB ---
